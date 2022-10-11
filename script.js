@@ -208,6 +208,23 @@ btnTransfer.addEventListener("click", function (event) {
 });
 
 ///////////EVENT LISTENER FOR LOAN BUTTON
+btnLoan.addEventListener("click", function (event) {
+  event.preventDefault();
+  const requestedLoanAmount = Number(inputLoanAmount.value);
+  const loanSecurityCheck = currentAccount.movements.some(
+    (mov) => requestedLoanAmount * 0.1 < mov
+  );
+  if (loanSecurityCheck && requestedLoanAmount > 0) {
+    //deposit the requested amount
+    currentAccount.movements.push(requestedLoanAmount);
+    inputLoanAmount.value = "";
+    updateUI(currentAccount);
+  } else {
+    console.log("loan: ", `loan cannot be approved`);
+  }
+
+  console.log(`loan requested`, `securityCheck: ${loanSecurityCheck}`);
+});
 
 ///////////EVENT LISTENER FOR CLOSING THE ACCOUNT
 btnClose.addEventListener("click", function (event) {
