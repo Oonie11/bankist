@@ -63,11 +63,15 @@ const inputClosePin = document.querySelector(".form__input--pin");
 
 ////////////////////////////////////////////////////////////
 // FUNCTION-TO-DISPLAY-MOVEMENTS
-const dailyMovement = function (mov) {
+const displayMovement = function (movements, sort = false) {
   //removing the existing html content
   containerMovements.innerHTML = "";
+
+  //sorting the display order
+  //creating a copy of movements with .slice() to keep original data unmuted
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
   //adding the amounts from given array as argument
-  mov.forEach((mov, i) => {
+  movs.forEach((mov, i) => {
     //checking the type of transaction through ternary operator
     const type = mov > 0 ? "deposit" : "withdrawal";
     //creating a template string to add to the dom + values from array
@@ -130,7 +134,7 @@ createUserName(accounts);
 
 function updateUI(account) {
   //Display Movements
-  dailyMovement(account.movements);
+  displayMovement(account.movements);
 
   //Display Balance
   calcDisplayBalance(account);
@@ -251,6 +255,15 @@ btnClose.addEventListener("click", function (event) {
   containerApp.style.opacity = 0;
 });
 
+///////////EVENT LISTENER FOR SORTING THE MOVEMENTS
+//creating a state variable
+let sorted = false;
+btnSort.addEventListener("click", function (event) {
+  event.preventDefault();
+  displayMovement(currentAccount.movements, !sorted);
+  sorted = !sorted;
+});
+
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
 // LECTURES
@@ -284,3 +297,38 @@ const totalDepositUSD = movements
 const receiverAccount = accounts.find((acc) => {
   return acc.owner === "Jessica Davis";
 });
+
+///PRACTICE ARRAY METHODS
+// //return an arr containing all movements from accounts object
+// const accountMovement = accounts.map((acc) => acc.movements);
+// //flattening all arrays in one array
+// const allMovements = accountMovement.flat();
+// //getting the sum of all movements
+// const totalOfMovements = allMovements.reduce((acc, curr) => acc + curr);
+// console.log("test", totalOfMovements);
+
+// //CHAINING THE ABOVE PROCESS
+// const overAllBalance = accounts
+//   .map((acc) => acc.movements)
+//   .flat()
+//   .reduce((acc, curr) => acc + curr);
+// console.log("test2", overAllBalance);
+
+// const owners = ["Jonas", "Zach", "Adam", "Martha"];
+// const ownersSort = owners.sort();
+// console.log("sort: ", ownersSort);
+// console.log("owners", owners);
+
+//return  < 0, A before B (Keep Order)
+//return > 0, B before A (Switch Order)
+// console.log(
+//   "movements",
+//   movements.sort((a, b) => {
+//     if (a > b) return 1;
+//     if (b > a) return -1;
+//   })
+// );
+
+//using .from method to generate an array of 100 numbers
+// const y = Array.from({ length: 100 }, (_, i) => i + 1);
+// console.log("y", y);
