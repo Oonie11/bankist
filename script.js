@@ -79,15 +79,23 @@ const inputClosePin = document.querySelector(".form__input--pin");
 
 ////////////////////////////////////////////////////////////
 // FUNCTION-TO-DISPLAY-MOVEMENTS
-const displayMovement = function (movements, sort = false) {
+const displayMovement = function (account, sort = false) {
   //removing the existing html content
   containerMovements.innerHTML = "";
 
   //sorting the display order
   //creating a copy of movements with .slice() to keep original data unmuted
-  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+  const movs = sort
+    ? account.movements.slice().sort((a, b) => a - b)
+    : account.movements;
   //adding the amounts from given array as argument
   movs.forEach((mov, i) => {
+    const date = new Date(account.movementsDates[i]);
+    const day = `${date.getDate()}`.padStart(2, 0);
+    const month = `${date.getMonth() + 1}`.padStart(2, 0);
+    const year = date.getFullYear();
+    const displayDate = `${month}/${day}/${year}`;
+
     //checking the type of transaction through ternary operator
     const type = mov > 0 ? "deposit" : "withdrawal";
     //creating a template string to add to the dom + values from array
@@ -95,7 +103,8 @@ const displayMovement = function (movements, sort = false) {
     <div class="movements__type movements__type--${type}"> ${
       i + 1
     } ${type}</div>
-    <div class="movements__value">${mov}€</div>
+    <div class="movements__date">${displayDate}</div>
+    <div class="movements__value">${mov.toFixed(2)}€</div>
   </div>`;
     //adds html string to dom using insertAdjacent
     containerMovements.insertAdjacentHTML("afterbegin", html);
@@ -106,7 +115,7 @@ const displayMovement = function (movements, sort = false) {
 const calcDisplayBalance = (account) => {
   //ARRAY METHODS  REDUCE
   account.balance = account.movements.reduce((acc, cur) => acc + cur, 0);
-  labelBalance.textContent = `${account.balance} €`;
+  labelBalance.textContent = `${account.balance.toFixed(2)} €`;
 };
 
 ////////////----FUNCTION TO DISPLAY SUMMARY------////////////
@@ -115,19 +124,19 @@ const calcDisplaySummary = (account) => {
   const incomes = account.movements
     .filter((mov) => mov > 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumIn.textContent = `${incomes}€`;
+  labelSumIn.textContent = `${incomes.toFixed(2)}€`;
 
   const out = account.movements
     .filter((mov) => mov < 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumOut.textContent = `${Math.abs(out)}€`;
+  labelSumOut.textContent = `${out.toFixed(2)}€`;
 
   const interest = account.movements
     .filter((mov) => mov > 0)
     .map((deposit) => (deposit * account.interestRate) / 100)
     .filter((int, i, arr) => int > 1)
     .reduce((acc, int) => acc + int);
-  labelSumInterest.textContent = `${interest}€`;
+  labelSumInterest.textContent = `${interest.toFixed(2)}€`;
 };
 
 /////////////////////////////////////////////////
@@ -150,7 +159,7 @@ createUserName(accounts);
 
 function updateUI(account) {
   //Display Movements
-  displayMovement(account.movements);
+  displayMovement(account);
 
   //Display Balance
   calcDisplayBalance(account);
@@ -159,11 +168,18 @@ function updateUI(account) {
   calcDisplaySummary(account);
 }
 
+let currentAccount;
+
+//////////////////////////////////////////////////////
+///////////----FAKE ALWAYS LOGGED IN
+//////////////////////////////////////////////////////
+currentAccount = account1;
+updateUI(currentAccount);
+containerApp.style.opacity = 100;
+
 //////////////////////////////////////////////////////
 ///////////EVENT LISTENER FOR LOGIN
 //////////////////////////////////////////////////////
-
-let currentAccount;
 
 btnLogin.addEventListener("click", function (event) {
   //prevent FORM from reloading
@@ -173,11 +189,20 @@ btnLogin.addEventListener("click", function (event) {
     (acc) => acc.username === inputLoginUsername.value.trim()
   );
 
-  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+  if (currentAccount?.pin === +inputLoginPin.value) {
     //display UI and Welcome Message
     labelWelcome.textContent = `Welcome Back ${
       currentAccount.owner.split(" ")[0]
     }`;
+
+    //----TIME STAMPS
+    const currentDate = new Date();
+    const day = `${currentDate.getDate()}`.padStart(2, 0);
+    const month = `${currentDate.getMonth() + 1}`.padStart(2, 0);
+    const year = currentDate.getFullYear();
+    const hour = `${currentDate.getHours()}`.padStart(2, 0);
+    const min = `${currentDate.getMinutes()}`.padStart(2, 0);
+    labelDate.textContent = `${month}/${day}/${year}, ${hour}:${min}`;
 
     //display account (OPACITY = 1)
     containerApp.style.opacity = 100;
@@ -201,7 +226,7 @@ btnLogin.addEventListener("click", function (event) {
 btnTransfer.addEventListener("click", function (event) {
   //to prevent the default reloading behavior of FORM on click
   event.preventDefault();
-  const transferAmount = Number(inputTransferAmount.value);
+  const transferAmount = +inputTransferAmount.value;
   const transferTo = inputTransferTo.value;
 
   //loop through the object to match for account
@@ -219,6 +244,10 @@ btnTransfer.addEventListener("click", function (event) {
     //add the transferAmount in movements
     currentAccount.movements.push(-transferAmount);
     receiverAccount.movements.push(transferAmount);
+    //add timestamp to the transaction
+    currentAccount.movementsDates.push(new Date().toISOString());
+    receiverAccount.movementsDates.push(new Date().toISOString());
+
     updateUI(currentAccount);
     inputTransferAmount.value = inputTransferTo.value = "";
     console.log(`transfer successful`);
@@ -230,13 +259,14 @@ btnTransfer.addEventListener("click", function (event) {
 ///////////EVENT LISTENER FOR LOAN BUTTON
 btnLoan.addEventListener("click", function (event) {
   event.preventDefault();
-  const requestedLoanAmount = Number(inputLoanAmount.value);
+  const requestedLoanAmount = Math.floor(inputLoanAmount.value);
   const loanSecurityCheck = currentAccount.movements.some(
     (mov) => requestedLoanAmount * 0.1 < mov
   );
   if (loanSecurityCheck && requestedLoanAmount > 0) {
     //deposit the requested amount
     currentAccount.movements.push(requestedLoanAmount);
+    currentAccount.movementsDates.push(new Date().toISOString());
     inputLoanAmount.value = "";
     updateUI(currentAccount);
   } else {
@@ -252,7 +282,7 @@ btnClose.addEventListener("click", function (event) {
   //store userInfo
   const confirmUsername = inputCloseUsername.value;
   //store PIN
-  const confirmPin = Number(inputClosePin.value);
+  const confirmPin = +inputClosePin.value;
 
   if (
     currentAccount.username === confirmUsername &&
@@ -276,7 +306,7 @@ btnClose.addEventListener("click", function (event) {
 let sorted = false;
 btnSort.addEventListener("click", function (event) {
   event.preventDefault();
-  displayMovement(currentAccount.movements, !sorted);
+  displayMovement(currentAccount, !sorted);
   sorted = !sorted;
 });
 
@@ -313,38 +343,3 @@ const totalDepositUSD = movements
 const receiverAccount = accounts.find((acc) => {
   return acc.owner === "Jessica Davis";
 });
-
-///PRACTICE ARRAY METHODS
-// //return an arr containing all movements from accounts object
-// const accountMovement = accounts.map((acc) => acc.movements);
-// //flattening all arrays in one array
-// const allMovements = accountMovement.flat();
-// //getting the sum of all movements
-// const totalOfMovements = allMovements.reduce((acc, curr) => acc + curr);
-// console.log("test", totalOfMovements);
-
-// //CHAINING THE ABOVE PROCESS
-// const overAllBalance = accounts
-//   .map((acc) => acc.movements)
-//   .flat()
-//   .reduce((acc, curr) => acc + curr);
-// console.log("test2", overAllBalance);
-
-// const owners = ["Jonas", "Zach", "Adam", "Martha"];
-// const ownersSort = owners.sort();
-// console.log("sort: ", ownersSort);
-// console.log("owners", owners);
-
-//return  < 0, A before B (Keep Order)
-//return > 0, B before A (Switch Order)
-// console.log(
-//   "movements",
-//   movements.sort((a, b) => {
-//     if (a > b) return 1;
-//     if (b > a) return -1;
-//   })
-// );
-
-//using .from method to generate an array of 100 numbers
-// const y = Array.from({ length: 100 }, (_, i) => i + 1);
-// console.log("y", y);
