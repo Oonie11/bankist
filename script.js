@@ -428,23 +428,3 @@ const currencies = new Map([
 const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
 /////////////////////////////////////////////////
-
-//ARRAY METHODS  FILTER
-//this will filter and return true boolean values base on statement below.
-const deposits = movements.filter((mov) => mov > 0);
-
-const withdrawals = movements.filter((mov) => mov < 0);
-
-//CHAINING MAP FILTER REDUCE
-const eurToUsd = 1.1;
-
-//PIPELINE
-const totalDepositUSD = movements
-  .filter((mov) => mov > 0)
-  .map((mov) => mov * eurToUsd)
-  .reduce((acc, mov) => acc + mov, 0);
-
-////////////////////////////---find--Account
-const receiverAccount = accounts.find((acc) => {
-  return acc.owner === "Jessica Davis";
-});
