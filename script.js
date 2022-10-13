@@ -79,6 +79,8 @@ const inputClosePin = document.querySelector(".form__input--pin");
 
 const locale = navigator.language;
 
+let currentAccount, timer;
+
 ////////////////////////////////////////////////////////////
 
 //FUNCTION FOR TIME-STAMP
@@ -99,6 +101,14 @@ const formatMovementDate = function (date, locale) {
   }
 };
 
+//FUNC FORMAT-CURRENCY
+function formatCurrency(value, locale, currency) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency,
+  }).format(value);
+}
+
 // FUNCTION-TO-DISPLAY-MOVEMENTS
 const displayMovement = function (account, sort = false) {
   //removing the existing html content
@@ -116,13 +126,17 @@ const displayMovement = function (account, sort = false) {
 
     const date = new Date(account.movementsDates[i]);
     const displayDate = formatMovementDate(date, account.locale);
+
+    //internationalizing numbers
+    const formattedMov = formatCurrency(mov, account.locale, account.currency);
+
     //creating a template string to add to the dom + values from array
     const html = `<div class="movements__row">
     <div class="movements__type movements__type--${type}"> ${
       i + 1
     } ${type}</div>
     <div class="movements__date">${displayDate}</div>
-    <div class="movements__value">${mov.toFixed(2)}€</div>
+    <div class="movements__value">${formattedMov}</div>
   </div>`;
     //adds html string to dom using insertAdjacent
     containerMovements.insertAdjacentHTML("afterbegin", html);
@@ -133,7 +147,14 @@ const displayMovement = function (account, sort = false) {
 const calcDisplayBalance = (account) => {
   //ARRAY METHODS  REDUCE
   account.balance = account.movements.reduce((acc, cur) => acc + cur, 0);
-  labelBalance.textContent = `${account.balance.toFixed(2)} €`;
+  //internationalizing numbers
+
+  labelBalance.textContent = `${formatCurrency(
+    account.balance,
+    account.locale,
+    account.currency
+  )}`;
+  // labelBalance.textContent = `${formatCurrency(account.balance)}`;
 };
 
 ////////////----FUNCTION TO DISPLAY SUMMARY------////////////
@@ -142,19 +163,31 @@ const calcDisplaySummary = (account) => {
   const incomes = account.movements
     .filter((mov) => mov > 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumIn.textContent = `${incomes.toFixed(2)}€`;
+  labelSumIn.textContent = `${formatCurrency(
+    incomes,
+    account.locale,
+    account.currency
+  )}`;
 
   const out = account.movements
     .filter((mov) => mov < 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumOut.textContent = `${out.toFixed(2)}€`;
+  labelSumOut.textContent = `${formatCurrency(
+    Math.abs(out),
+    account.locale,
+    account.currency
+  )}`;
 
   const interest = account.movements
     .filter((mov) => mov > 0)
     .map((deposit) => (deposit * account.interestRate) / 100)
     .filter((int, i, arr) => int > 1)
     .reduce((acc, int) => acc + int);
-  labelSumInterest.textContent = `${interest.toFixed(2)}€`;
+  labelSumInterest.textContent = `${formatCurrency(
+    interest,
+    account.locale,
+    account.currency
+  )}`;
 };
 
 /////////////////////////////////////////////////
@@ -186,14 +219,37 @@ function updateUI(account) {
   calcDisplaySummary(account);
 }
 
-let currentAccount;
+/////////////////////////////////////////////////
+//FUNCTION LOGOUT TIMER
+function startLogOutTimer() {
+  const tick = () => {
+    const min = String(Math.trunc(logoutTime / 60)).padStart(2, 0);
+    const sec = String(logoutTime % 60).padStart(2, 0);
+    //in each call print the remaining time
+    labelTimer.textContent = `${min}:${sec}`;
+    //when timer is 0, stop time and log out
+    if (logoutTime === 0) {
+      clearInterval(timer);
+      labelWelcome.textContent = `Login to get Started`;
+      containerApp.style.opacity = 0;
+    }
+    logoutTime--;
+  };
+
+  //set time to 5 min
+  let logoutTime = 30;
+  tick(logoutTime);
+  //call timer every-second
+  const timer = setInterval(tick, 1000, logoutTime);
+  return timer;
+}
 
 //////////////////////////////////////////////////////
 ///////////----FAKE ALWAYS LOGGED IN
 //////////////////////////////////////////////////////
-currentAccount = account1;
-updateUI(currentAccount);
-containerApp.style.opacity = 100;
+// currentAccount = account1;
+// updateUI(currentAccount);
+// containerApp.style.opacity = 100;
 
 //locale for timestamp
 function localeTimeStamp(locale = navigator.language) {
@@ -218,7 +274,6 @@ function localeTimeStamp(locale = navigator.language) {
 btnLogin.addEventListener("click", function (event) {
   //prevent FORM from reloading
   event.preventDefault();
-
   currentAccount = accounts.find(
     (acc) => acc.username === inputLoginUsername.value.trim()
   );
@@ -242,6 +297,10 @@ btnLogin.addEventListener("click", function (event) {
     //display account (OPACITY = 1)
     containerApp.style.opacity = 100;
 
+    if (timer) {
+      clearInterval(timer);
+    }
+    timer = startLogOutTimer();
     updateUI(currentAccount);
 
     //clear input fields ( assigning from right to left)
@@ -283,6 +342,9 @@ btnTransfer.addEventListener("click", function (event) {
     currentAccount.movementsDates.push(new Date().toISOString());
     receiverAccount.movementsDates.push(new Date().toISOString());
 
+    //RESET TIMER
+    clearInterval(timer);
+    timer = startLogOutTimer();
     updateUI(currentAccount);
     inputTransferAmount.value = inputTransferTo.value = "";
     console.log(`transfer successful`);
@@ -298,12 +360,20 @@ btnLoan.addEventListener("click", function (event) {
   const loanSecurityCheck = currentAccount.movements.some(
     (mov) => requestedLoanAmount * 0.1 < mov
   );
+
+  //RESET TIMER
+  clearInterval(timer);
+  timer = startLogOutTimer();
+
   if (loanSecurityCheck && requestedLoanAmount > 0) {
     //deposit the requested amount
-    currentAccount.movements.push(requestedLoanAmount);
-    currentAccount.movementsDates.push(new Date().toISOString());
+    setTimeout(function () {
+      currentAccount.movements.push(requestedLoanAmount);
+      currentAccount.movementsDates.push(new Date().toISOString());
+      updateUI(currentAccount);
+    }, 2500);
+
     inputLoanAmount.value = "";
-    updateUI(currentAccount);
   } else {
     console.log("loan: ", `loan cannot be approved`);
   }
