@@ -77,14 +77,15 @@ const inputLoanAmount = document.querySelector(".form__input--loan-amount");
 const inputCloseUsername = document.querySelector(".form__input--user");
 const inputClosePin = document.querySelector(".form__input--pin");
 
+const locale = navigator.language;
+
 ////////////////////////////////////////////////////////////
 
 //FUNCTION FOR TIME-STAMP
-const formatMovementDate = function (date) {
+const formatMovementDate = function (date, locale) {
   const calPassedDays = (date1, date2) =>
     Math.round(Math.abs((date2 - date1) / (1000 * 60 * 60 * 24)));
   const daysPassed = calPassedDays(new Date(), date);
-  console.log("daysPassed", daysPassed);
 
   if (daysPassed === 0) return `today`;
   if (daysPassed === 1) return `yesterday`;
@@ -93,7 +94,8 @@ const formatMovementDate = function (date) {
     const day = `${date.getDate()}`.padStart(2, 0);
     const month = `${date.getMonth() + 1}`.padStart(2, 0);
     const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    // return `${month}/${day}/${year}`;
+    return new Intl.DateTimeFormat(locale).format(date);
   }
 };
 
@@ -113,7 +115,7 @@ const displayMovement = function (account, sort = false) {
     const type = mov > 0 ? "deposit" : "withdrawal";
 
     const date = new Date(account.movementsDates[i]);
-    const displayDate = formatMovementDate(date);
+    const displayDate = formatMovementDate(date, account.locale);
     //creating a template string to add to the dom + values from array
     const html = `<div class="movements__row">
     <div class="movements__type movements__type--${type}"> ${
@@ -193,6 +195,22 @@ currentAccount = account1;
 updateUI(currentAccount);
 containerApp.style.opacity = 100;
 
+//locale for timestamp
+function localeTimeStamp(locale = navigator.language) {
+  //experimenting with time API
+  const date = new Date();
+  const options = {
+    hour: "numeric",
+    minute: "numeric",
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    // weekday: "long",
+  };
+
+  labelDate.textContent = new Intl.DateTimeFormat(locale, options).format(date);
+}
+
 //////////////////////////////////////////////////////
 ///////////EVENT LISTENER FOR LOGIN
 //////////////////////////////////////////////////////
@@ -212,13 +230,14 @@ btnLogin.addEventListener("click", function (event) {
     }`;
 
     //----TIME STAMPS
-    const currentDate = new Date();
-    const day = `${currentDate.getDate()}`.padStart(2, 0);
-    const month = `${currentDate.getMonth() + 1}`.padStart(2, 0);
-    const year = currentDate.getFullYear();
-    const hour = `${currentDate.getHours()}`.padStart(2, 0);
-    const min = `${currentDate.getMinutes()}`.padStart(2, 0);
-    labelDate.textContent = `${month}/${day}/${year}, ${hour}:${min}`;
+    // const currentDate = new Date();
+    // const day = `${currentDate.getDate()}`.padStart(2, 0);
+    // const month = `${currentDate.getMonth() + 1}`.padStart(2, 0);
+    // const year = currentDate.getFullYear();
+    // const hour = `${currentDate.getHours()}`.padStart(2, 0);
+    // const min = `${currentDate.getMinutes()}`.padStart(2, 0);
+    // labelDate.textContent = `${month}/${day}/${year}, ${hour}:${min}`;
+    localeTimeStamp(currentAccount.locale);
 
     //display account (OPACITY = 1)
     containerApp.style.opacity = 100;
